@@ -1,7 +1,15 @@
 import { google } from "googleapis";
 
 const SHEET_ID = process.env["GOOGLE_SHEET_ID"];
-const KEY_JSON = process.env["GOOGLE_SERVICE_ACCOUNT_KEY"];
+
+// Strip TOML triple-quote delimiters (''') and surrounding whitespace that
+// can accidentally be included when copying the value from a .replit file.
+function sanitizeKeyJson(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  return raw.replace(/^'''\s*/s, "").replace(/\s*'''$/s, "").trim();
+}
+
+const KEY_JSON = sanitizeKeyJson(process.env["GOOGLE_SERVICE_ACCOUNT_KEY"]);
 
 function getAuth() {
   if (!KEY_JSON || !SHEET_ID) return null;
