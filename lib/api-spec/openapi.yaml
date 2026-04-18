@@ -1,0 +1,456 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: dropdowns
+    description: Dropdown data management
+  - name: submissions
+    description: Form submission management
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /dropdowns:
+    get:
+      operationId: getDropdowns
+      tags: [dropdowns]
+      summary: Get all dropdown options
+      description: Returns all dropdown options for the form (payroll, company, work, pending, officer, assigned)
+      responses:
+        "200":
+          description: Dropdown data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DropdownData"
+
+  /dropdowns/{category}:
+    post:
+      operationId: addDropdownOption
+      tags: [dropdowns]
+      summary: Add a new option to a dropdown category
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [payroll, company, work, pending, officer, assigned]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddDropdownOptionBody"
+      responses:
+        "201":
+          description: Option added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DropdownOption"
+        "400":
+          description: Bad request
+
+    delete:
+      operationId: deleteDropdownOption
+      tags: [dropdowns]
+      summary: Remove an option from a dropdown category
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [payroll, company, work, pending, officer, assigned]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteDropdownOptionBody"
+      responses:
+        "204":
+          description: Option deleted
+        "404":
+          description: Not found
+
+  /submissions:
+    get:
+      operationId: listSubmissions
+      tags: [submissions]
+      summary: List all form submissions
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of submissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionList"
+
+    post:
+      operationId: createSubmission
+      tags: [submissions]
+      summary: Create a new form submission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubmissionBody"
+      responses:
+        "201":
+          description: Submission created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Submission"
+        "400":
+          description: Validation error
+
+  /submissions/{id}:
+    get:
+      operationId: getSubmission
+      tags: [submissions]
+      summary: Get a single submission
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Submission found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Submission"
+        "404":
+          description: Not found
+
+    delete:
+      operationId: deleteSubmission
+      tags: [submissions]
+      summary: Delete a submission
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /submissions/summary:
+    get:
+      operationId: getSubmissionSummary
+      tags: [submissions]
+      summary: Get submission statistics summary
+      parameters:
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter from this date (ISO format YYYY-MM-DD)
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter up to this date (ISO format YYYY-MM-DD)
+      responses:
+        "200":
+          description: Submission summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionSummary"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    DropdownOption:
+      type: object
+      properties:
+        id:
+          type: integer
+        category:
+          type: string
+        value:
+          type: string
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+      required:
+        - id
+        - category
+        - value
+        - sortOrder
+        - createdAt
+
+    DropdownData:
+      type: object
+      properties:
+        payroll:
+          type: array
+          items:
+            type: string
+        company:
+          type: array
+          items:
+            type: string
+        work:
+          type: array
+          items:
+            type: string
+        pending:
+          type: array
+          items:
+            type: string
+        officer:
+          type: array
+          items:
+            type: string
+        assigned:
+          type: array
+          items:
+            type: string
+      required:
+        - payroll
+        - company
+        - work
+        - pending
+        - officer
+        - assigned
+
+    AddDropdownOptionBody:
+      type: object
+      properties:
+        value:
+          type: string
+      required:
+        - value
+
+    DeleteDropdownOptionBody:
+      type: object
+      properties:
+        value:
+          type: string
+      required:
+        - value
+
+    Submission:
+      type: object
+      properties:
+        id:
+          type: integer
+        payroll:
+          type: string
+        company:
+          type: string
+        work:
+          type: string
+        detail1:
+          type: string
+        detail2:
+          type: ["string", "null"]
+        pending:
+          type: string
+        remarks:
+          type: ["string", "null"]
+        officer:
+          type: ["string", "null"]
+        assigned:
+          type: ["string", "null"]
+        submittedAt:
+          type: string
+      required:
+        - id
+        - payroll
+        - company
+        - work
+        - detail1
+        - detail2
+        - pending
+        - remarks
+        - officer
+        - assigned
+        - submittedAt
+
+    SubmissionList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Submission"
+        total:
+          type: integer
+      required:
+        - items
+        - total
+
+    CreateSubmissionBody:
+      type: object
+      properties:
+        payroll:
+          type: string
+        company:
+          type: string
+        work:
+          type: string
+        detail1:
+          type: string
+        detail2:
+          type: ["string", "null"]
+        pending:
+          type: string
+        remarks:
+          type: ["string", "null"]
+        officer:
+          type: ["string", "null"]
+        assigned:
+          type: ["string", "null"]
+      required:
+        - payroll
+        - company
+        - work
+        - detail1
+        - pending
+
+    SubmissionSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        todayCount:
+          type: integer
+        byWork:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkCount"
+        byPending:
+          type: array
+          items:
+            $ref: "#/components/schemas/PendingCount"
+        byOfficer:
+          type: array
+          items:
+            $ref: "#/components/schemas/OfficerCount"
+        byDoer:
+          type: array
+          items:
+            $ref: "#/components/schemas/DoerCount"
+        recentSubmissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Submission"
+      required:
+        - total
+        - todayCount
+        - byWork
+        - byPending
+        - byOfficer
+        - byDoer
+        - recentSubmissions
+
+    WorkCount:
+      type: object
+      properties:
+        work:
+          type: string
+        count:
+          type: integer
+      required:
+        - work
+        - count
+
+    PendingCount:
+      type: object
+      properties:
+        pending:
+          type: string
+        count:
+          type: integer
+      required:
+        - pending
+        - count
+
+    OfficerCount:
+      type: object
+      properties:
+        officer:
+          type: string
+        total:
+          type: integer
+        done:
+          type: integer
+        pending:
+          type: integer
+      required:
+        - officer
+        - total
+        - done
+        - pending
+
+    DoerCount:
+      type: object
+      properties:
+        doer:
+          type: string
+        total:
+          type: integer
+        done:
+          type: integer
+        pending:
+          type: integer
+      required:
+        - doer
+        - total
+        - done
+        - pending

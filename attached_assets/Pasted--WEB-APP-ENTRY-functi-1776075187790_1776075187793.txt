@@ -1,0 +1,139 @@
+/* ================================
+   WEB APP ENTRY
+================================ */
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile("index")
+    .setTitle("Task & Compliance Tracker")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+
+/* ================================
+   DROPDOWN DATA (CACHED)
+================================ */
+
+function getDropdowns() {
+
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get("DROPDOWNS_FINAL");
+  if (cached) return JSON.parse(cached);
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName("DROPDOWN_MASTER");
+
+  if (!sh) throw new Error("DROPDOWN_MASTER sheet not found");
+
+  const lastRow = sh.getLastRow();
+  const lastCol = sh.getLastColumn();
+
+  if (lastRow < 2) return {};
+
+  const data = sh.getRange(1, 1, lastRow, lastCol).getValues();
+  data.shift(); // remove header
+
+  const out = {
+    payroll: [],
+    company: [],
+    work: [],
+    pending: [],
+    officer: [],
+    assigned: []
+  };
+
+  data.forEach(r => {
+    r[0] && out.payroll.push(String(r[0]).trim());
+    r[1] && out.company.push(String(r[1]).trim());
+    r[2] && out.work.push(String(r[2]).trim());
+    r[3] && out.pending.push(String(r[3]).trim());
+    r[4] && out.officer.push(String(r[4]).trim());
+    r[5] && out.assigned.push(String(r[5]).trim());
+  });
+
+  Object.keys(out).forEach(k => {
+    out[k] = [...new Set(out[k])].sort();
+  });
+
+  cache.put("DROPDOWNS_FINAL", JSON.stringify(out), 21600);
+
+  return out;
+}
+
+
+/* ================================
+   CLEAR CACHE WHEN EDITED
+================================ */
+
+function clearDropdownCache() {
+  CacheService.getScriptCache().remove("DROPDOWNS_FINAL");
+}
+
+function onEdit(e) {
+  if (!e) return;
+  if (e.range.getSheet().getName() === "DROPDOWN_MASTER") {
+    clearDropdownCache();
+  }
+}
+
+
+/* ================================
+   FORM SUBMISSION
+================================ */
+
+function sanitize(v) {
+  return String(v || "").trim();
+}
+
+function submitForm(d) {
+
+  try {
+
+    d.payroll = sanitize(d.payroll);
+    d.company = sanitize(d.company);
+    d.work = sanitize(d.work);
+    d.detail1 = sanitize(d.detail1);
+    d.detail2 = sanitize(d.detail2);
+    d.pending = sanitize(d.pending);
+    d.remarks = sanitize(d.remarks);
+    d.officer = sanitize(d.officer);
+    d.assigned = sanitize(d.assigned);
+
+    if (!d.payroll || !d.company || !d.work || !d.detail1 || !d.pending) {
+      throw new Error("Required fields missing");
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sh = ss.getSheetByName("FORM_RESPONSES");
+
+    if (!sh) throw new Error("FORM_RESPONSES sheet not found");
+
+   const ts = Utilities.formatDate(
+   new Date(),
+   Session.getScriptTimeZone(),
+   "dd/MM/yyyy HH:mm:ss");
+
+    const row = [
+      ts,
+      d.payroll,
+      d.company,
+      d.work,
+      d.detail1,
+      d.detail2,
+      d.pending,
+      d.remarks,
+      d.officer,
+      d.assigned
+    ];
+
+    sh.appendRow(row);
+
+    return { status: "SUCCESS" };
+
+  } catch (err) {
+    Logger.log(err);
+    return {
+      status: "ERROR",
+      message: err.message
+    };
+  }
+}

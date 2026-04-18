@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+body{
+  font-family:'Inter',system-ui;
+  background:#f3f4f6;
+  margin:0;
+}
+.container{
+  max-width:650px;
+  margin:40px auto;
+  padding:0 16px;
+}
+.card{
+  background:#fff;
+  border-radius:20px;
+  padding:28px;
+  box-shadow:0 10px 30px rgba(0,0,0,.08);
+}
+h2{margin:0 0 6px;font-weight:600;}
+.subtitle{color:#6b7280;font-size:14px;margin-bottom:20px;}
+.field{margin-bottom:18px;}
+label{font-size:13px;font-weight:500;color:#374151;display:block;margin-bottom:6px;}
+
+input,textarea{
+  width:100%;
+  padding:12px;
+  border-radius:12px;
+  border:1px solid #e5e7eb;
+  font-size:14px;
+}
+
+.search-box{position:relative;}
+.dropdown{
+  position:absolute;
+  width:100%;
+  max-height:200px;
+  overflow-y:auto;
+  background:#fff;
+  border:1px solid #ddd;
+  border-radius:12px;
+  margin-top:4px;
+  display:none;
+  z-index:100;
+}
+.option{
+  padding:10px;
+  cursor:pointer;
+}
+.option:hover,
+.option.active{
+  background:#6366f1;
+  color:white;
+}
+
+button{
+  width:100%;
+  padding:14px;
+  border-radius:14px;
+  border:none;
+  background:#6366f1;
+  color:white;
+  font-weight:600;
+  cursor:pointer;
+}
+button:disabled{background:#9ca3af;}
+.message{margin-top:15px;font-size:14px;}
+.success{color:#16a34a;}
+.error{color:#dc2626;}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<div class="card">
+<h2>Task & Compliance Tracker</h2>
+<div class="subtitle">Labour Laws India Associates Pvt. Ltd.</div>
+
+<div id="formArea"></div>
+
+<button id="submitBtn">Submit</button>
+<div id="msg" class="message"></div>
+</div>
+</div>
+
+<script>
+
+const dropdownData = {};
+
+function createSearchField(id,label){
+
+  const wrapper=document.createElement("div");
+  wrapper.className="field";
+
+  wrapper.innerHTML=`
+    <label>${label}</label>
+    <div class="search-box">
+      <input type="text" id="${id}" autocomplete="off">
+      <div class="dropdown" id="${id}_dropdown"></div>
+    </div>
+  `;
+
+  document.getElementById("formArea").appendChild(wrapper);
+
+  const input=document.getElementById(id);
+  const dropdown=document.getElementById(id+"_dropdown");
+
+  let activeIndex=-1;
+
+  function render(filter=""){
+
+    dropdown.innerHTML="";
+    const query = filter.toLowerCase().trim();
+    const allItems = dropdownData[id] || [];
+    let items;
+
+    if(!query){
+      items = allItems.slice(0,50);
+    } else {
+
+      const exact=[], starts=[], contains=[];
+
+      allItems.forEach(v=>{
+        const val=v.toLowerCase();
+        if(val===query) exact.push(v);
+        else if(val.startsWith(query)) starts.push(v);
+        else if(val.includes(query)) contains.push(v);
+      });
+
+      items=[...exact,...starts,...contains].slice(0,50);
+    }
+
+    items.forEach((v,i)=>{
+      const div=document.createElement("div");
+      div.className="option";
+      div.textContent=v;
+
+      div.addEventListener("click",()=>{
+        input.value=v;
+        dropdown.style.display="none";
+      });
+
+      dropdown.appendChild(div);
+    });
+
+    activeIndex=-1;
+    dropdown.style.display=items.length?"block":"none";
+  }
+
+  input.addEventListener("focus",()=>render(input.value));
+  input.addEventListener("input",e=>render(e.target.value));
+
+  input.addEventListener("keydown",e=>{
+    const options=dropdown.querySelectorAll(".option");
+    if(!options.length) return;
+
+    if(e.key==="ArrowDown"){
+      e.preventDefault();
+      activeIndex=(activeIndex+1)%options.length;
+      setActive(options);
+    }
+
+    if(e.key==="ArrowUp"){
+      e.preventDefault();
+      activeIndex=(activeIndex-1+options.length)%options.length;
+      setActive(options);
+    }
+
+    if(e.key==="Enter" && activeIndex>-1){
+      e.preventDefault();
+      options[activeIndex].click();
+    }
+
+    if(e.key==="Escape"){
+      dropdown.style.display="none";
+    }
+  });
+
+  function setActive(options){
+    options.forEach(o=>o.classList.remove("active"));
+    options[activeIndex].classList.add("active");
+    options[activeIndex].scrollIntoView({block:"nearest"});
+  }
+
+  document.addEventListener("click",e=>{
+    if(!wrapper.contains(e.target)){
+      dropdown.style.display="none";
+    }
+  });
+}
+
+function createTextField(id,label){
+  const wrapper=document.createElement("div");
+  wrapper.className="field";
+  wrapper.innerHTML=`<label>${label}</label><input id="${id}">`;
+  document.getElementById("formArea").appendChild(wrapper);
+}
+
+function createTextArea(id,label){
+  const wrapper=document.createElement("div");
+  wrapper.className="field";
+  wrapper.innerHTML=`<label>${label}</label><textarea id="${id}"></textarea>`;
+  document.getElementById("formArea").appendChild(wrapper);
+}
+
+function showMessage(text,type){
+  const m=document.getElementById("msg");
+  m.className="message "+type;
+  m.textContent=text;
+}
+
+function clearForm(){
+  document.querySelectorAll("input, textarea").forEach(el=>el.value="");
+}
+
+function loadDropdowns(){
+  google.script.run
+    .withSuccessHandler(d=>{
+      Object.assign(dropdownData,d);
+
+      createSearchField("payroll","Payroll Master Name *");
+      createSearchField("company","CO CODE / NAME OF COMPANY *");
+      createSearchField("work","Work To Be Done *");
+      createTextField("detail1","Detail *");
+      createTextField("detail2","Additional Detail");
+      createSearchField("pending","Pending Done *");
+      createTextArea("remarks","Remarks (if pending)");
+      createSearchField("officer","Field Officer Name");
+      createSearchField("assigned","Person who assigned work");
+    })
+    .getDropdowns();
+}
+
+document.getElementById("submitBtn").addEventListener("click",()=>{
+
+  const btn=document.getElementById("submitBtn");
+  btn.disabled=true;
+  btn.innerText="Submitting...";
+
+  const data={
+    payroll:document.getElementById("payroll").value,
+    company:document.getElementById("company").value,
+    work:document.getElementById("work").value,
+    detail1:document.getElementById("detail1").value,
+    detail2:document.getElementById("detail2").value,
+    pending:document.getElementById("pending").value,
+    remarks:document.getElementById("remarks").value,
+    officer:document.getElementById("officer").value,
+    assigned:document.getElementById("assigned").value
+  };
+
+  if(!data.payroll||!data.company||!data.work||!data.detail1||!data.pending){
+    showMessage("Please fill required fields","error");
+    btn.disabled=false;
+    btn.innerText="Submit";
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(res=>{
+      if(res.status==="SUCCESS"){
+        showMessage("Submitted Successfully","success");
+        clearForm();
+      } else {
+        showMessage(res.message,"error");
+      }
+      btn.disabled=false;
+      btn.innerText="Submit";
+    })
+    .submitForm(data);
+});
+
+loadDropdowns();
+</script>
+
+</body>
+</html>
