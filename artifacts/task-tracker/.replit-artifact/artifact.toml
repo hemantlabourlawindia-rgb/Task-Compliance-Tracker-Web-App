@@ -12,7 +12,7 @@ version = "1.0.0"
 [[services]]
 name = "web"
 paths = [ "/" ]
-localPort = 26123
+localPort = 26124
 
 [services.development]
 run = "pnpm --filter @workspace/task-tracker run dev"
@@ -27,5 +27,5 @@ from = "/*"
 to = "/index.html"
 
 [services.env]
-PORT = "26123"
+PORT = "26124"
 BASE_PATH = "/"
